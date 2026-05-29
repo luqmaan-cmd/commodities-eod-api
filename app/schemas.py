@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 
 class CommodityEODResponse(BaseModel):
@@ -38,3 +38,14 @@ class PaginatedResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     database: str
+
+
+class SQLQueryRequest(BaseModel):
+    query: str
+    params: Optional[Dict[str, Any]] = None
+
+
+class SQLQueryResponse(BaseModel):
+    columns: List[str]
+    data: List[Dict[str, Any]]
+    row_count: int

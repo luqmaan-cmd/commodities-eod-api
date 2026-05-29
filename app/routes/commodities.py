@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
-from datetime import date
+from sqlalchemy import func, and_, text
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 import math
 
@@ -11,9 +12,12 @@ from app.schemas import (
     CommodityEODResponse,
     CommodityQuery,
     PaginatedResponse,
-    HealthResponse
+    HealthResponse,
+    SQLQueryRequest,
+    SQLQueryResponse
 )
 from app.auth import verify_api_key
+from app.sql_validator import validate_select_query
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -165,3 +169,49 @@ async def query_commodities(
         total=total,
         total_pages=total_pages
     )
+
+
+@router.post("/commodities/sql", response_model=SQLQueryResponse)
+async def execute_sql_query(
+    body: SQLQueryRequest,
+    db: Session = Depends(get_db)
+):
+    validated_query = validate_select_query(body.query)
+
+    try:
+        # Set a query timeout to prevent runaway queries
+        db.execute(text("SET LOCAL statement_timeout = '30000'"))
+
+        params = body.params or {}
+        result = db.execute(text(validated_query), params)
+
+        columns = list(result.keys())
+        rows = result.fetchall()
+
+        # Convert row tuples to dicts, serializing non-JSON types
+        data = []
+        for row in rows:
+            row_dict = {}
+            for col, val in zip(columns, row):
+                if isinstance(val, Decimal):
+                    row_dict[col] = float(val)
+                elif isinstance(val, datetime):
+                    row_dict[col] = val.isoformat()
+                elif isinstance(val, date):
+                    row_dict[col] = val.isoformat()
+                else:
+                    row_dict[col] = val
+            data.append(row_dict)
+
+        return SQLQueryResponse(
+            columns=columns,
+            data=data,
+            row_count=len(data)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Query execution error: {str(e)}"
+        )

@@ -366,6 +366,82 @@ curl -X POST \
 
 ---
 
+### Execute Raw SQL Query
+
+Execute a read-only SQL SELECT query against the commodities database. Designed for programmatic and agent use.
+
+**Security:** Only `SELECT` statements are permitted. Semicolons, SQL comments, and non-SELECT statements are rejected.
+
+**Request:**
+```bash
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT symbol, close, date FROM commodities_eod WHERE symbol = :symbol ORDER BY date DESC LIMIT 5", "params": {"symbol": "CL"}}' \
+  "https://commodities-api-832081557693.europe-west2.run.app/commodities/sql"
+```
+
+**Request Body:**
+```json
+{
+  "query": "SELECT symbol, close, date FROM commodities_eod WHERE symbol = :symbol ORDER BY date DESC LIMIT 5",
+  "params": {
+    "symbol": "CL"
+  }
+}
+```
+
+**Request Body Fields:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| query | string | Yes | SQL SELECT statement to execute. Supports named parameters with `:param` syntax. |
+| params | object | No | Key-value pairs for parameterized query binding (e.g. `{"symbol": "CL"}` binds `:symbol` in the query) |
+
+**Response:**
+```json
+{
+  "columns": ["symbol", "close", "date"],
+  "data": [
+    {
+      "symbol": "CL",
+      "close": 92.13,
+      "date": "2026-04-22"
+    },
+    {
+      "symbol": "CL",
+      "close": 91.50,
+      "date": "2026-04-21"
+    }
+  ],
+  "row_count": 2
+}
+```
+
+**Response Fields:**
+| Name | Type | Description |
+|------|------|-------------|
+| columns | string[] | List of column names in the result set |
+| data | object[] | Array of row objects, keyed by column name |
+| row_count | integer | Number of rows returned |
+
+**Validation Errors:**
+
+| Input | Error |
+|-------|-------|
+| Empty query | 400: "Query cannot be empty" |
+| `DROP TABLE commodities_eod` | 400: "Only SELECT statements are allowed" |
+| `SELECT * FROM t; DROP TABLE t` | 400: "Semicolons are not allowed in queries" |
+| `SELECT * FROM t -- comment` | 400: "SQL comments are not allowed in queries" |
+| `INSERT INTO t VALUES (1)` | 400: "Only SELECT statements are allowed" |
+| Multiple statements | 400: "Only a single SQL statement is allowed" |
+
+**Notes:**
+- A 30-second query timeout is enforced to prevent runaway queries
+- Parameterized queries are strongly recommended to prevent SQL injection
+- `Decimal` values are returned as floats, `date`/`datetime` values as ISO 8601 strings
+
+---
+
 ## Available Commodities
 
 ### Energy

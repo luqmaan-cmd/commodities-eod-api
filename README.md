@@ -95,6 +95,7 @@ uvicorn app.main:app --reload
 | GET | `/commodities/{symbol}` | Historical data for a commodity |
 | GET | `/commodities` | All commodities (paginated) |
 | POST | `/commodities/query` | Query multiple commodities |
+| POST | `/commodities/sql` | Execute read-only SQL query |
 
 ### Authentication
 
@@ -244,6 +245,7 @@ commodities-eod-api/
 │   ├── models.py         # SQLAlchemy models
 │   ├── schemas.py        # Pydantic schemas
 │   ├── auth.py           # API key authentication
+│   ├── sql_validator.py  # SQL query validation
 │   └── routes/
 │       ├── __init__.py
 │       └── commodities.py  # API endpoints
