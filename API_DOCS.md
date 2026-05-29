@@ -442,6 +442,47 @@ curl -X POST \
 
 ---
 
+## Database Schema
+
+The database contains a single table used by all endpoints:
+
+```sql
+CREATE TABLE commodities_eod (
+    date            DATE NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    name            VARCHAR(100) NOT NULL,
+    open            NUMERIC,
+    high            NUMERIC,
+    low             NUMERIC,
+    close           NUMERIC,
+    adjusted_close  NUMERIC,
+    volume          BIGINT,
+    category        VARCHAR(50),
+    ingestion_ts    TIMESTAMP,
+    PRIMARY KEY (date, symbol)
+);
+```
+
+**Column Reference:**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `date` | DATE | Trading date (part of composite primary key) |
+| `symbol` | VARCHAR(20) | Commodity ticker symbol (part of composite primary key) |
+| `name` | VARCHAR(100) | Full commodity name |
+| `open` | NUMERIC | Opening price |
+| `high` | NUMERIC | Highest price of the day |
+| `low` | NUMERIC | Lowest price of the day |
+| `close` | NUMERIC | Closing price |
+| `adjusted_close` | NUMERIC | Adjusted closing price (corporate actions, splits) |
+| `volume` | BIGINT | Trading volume |
+| `category` | VARCHAR(50) | Commodity category: Energy, Metals, Grains, Softs, Livestock, Other |
+| `ingestion_ts` | TIMESTAMP | Timestamp when the record was ingested into the database |
+
+**Categories:** Energy, Metals, Grains, Softs, Livestock, Other
+
+---
+
 ## Available Commodities
 
 ### Energy
