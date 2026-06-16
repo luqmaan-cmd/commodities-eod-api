@@ -62,6 +62,8 @@ X-API-Key: YOUR_API_KEY
 
 Check API and database connectivity.
 
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/health?api_key=YOUR_API_KEY`
+
 **Request:**
 ```bash
 curl -X GET \
@@ -106,6 +108,8 @@ curl -X GET \
 
 Get all available commodity symbols.
 
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/commodities/symbols?api_key=YOUR_API_KEY`
+
 **Request:**
 ```bash
 curl -X GET \
@@ -139,6 +143,8 @@ curl -X GET \
 ### List All Categories
 
 Get all available commodity categories.
+
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/commodities/categories?api_key=YOUR_API_KEY`
 
 **Request:**
 ```bash
@@ -175,6 +181,10 @@ curl -X GET \
 Get the most recent EOD data for all commodities. Optionally filter by category.
 
 > **Note:** This endpoint is **not paginated** — it returns one record per symbol in a single response.
+
+**HTTPS (all):** `https://commodities-api-832081557693.europe-west2.run.app/commodities/latest?api_key=YOUR_API_KEY`
+
+**HTTPS (by category):** `https://commodities-api-832081557693.europe-west2.run.app/commodities/latest?category=Metals&api_key=YOUR_API_KEY`
 
 **Request:**
 ```bash
@@ -244,6 +254,8 @@ curl -X GET \
 
 Get the most recent EOD data for a specific commodity.
 
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/commodities/latest/CL?api_key=YOUR_API_KEY`
+
 **Request:**
 ```bash
 curl -X GET \
@@ -290,6 +302,8 @@ curl -X GET \
 Get historical EOD data for a specific commodity with pagination and date filtering.
 
 > **Note:** Results are sorted by `date` descending (most recent first).
+
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/commodities/CL?start_date=2024-01-01&end_date=2024-12-31&page=1&page_size=10&api_key=YOUR_API_KEY`
 
 **Request:**
 ```bash
@@ -354,6 +368,8 @@ curl -X GET \
 Get all EOD data across all commodities with pagination and filtering.
 
 > **Note:** Results are sorted by `date` descending, then `symbol` ascending.
+
+**HTTPS:** `https://commodities-api-832081557693.europe-west2.run.app/commodities?category=Energy&page=1&page_size=10&api_key=YOUR_API_KEY`
 
 **Request:**
 ```bash
