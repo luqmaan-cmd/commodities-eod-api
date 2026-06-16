@@ -30,6 +30,14 @@ A FastAPI microservice for querying end-of-day (EOD) commodities price data. Thi
 https://commodities-api-832081557693.europe-west2.run.app
 ```
 
+## Version
+
+| Version | Date | Description |
+|---------|------|-------------|
+| 1.0.0 | Current | Initial release — all endpoints, API key auth, SQL query support |
+
+---
+
 ## Authentication
 
 All endpoints require an API key. Provide it using one of these methods:
@@ -43,6 +51,8 @@ All endpoints require an API key. Provide it using one of these methods:
 ```
 X-API-Key: YOUR_API_KEY
 ```
+
+> **Note:** Symbol path parameters are case-insensitive. For example, `cl`, `Cl`, and `CL` all resolve to the same commodity.
 
 ---
 
@@ -59,13 +69,36 @@ curl -X GET \
   "https://commodities-api-832081557693.europe-west2.run.app/health"
 ```
 
-**Response:**
+**Response (healthy):**
 ```json
 {
   "status": "healthy",
   "database": "connected"
 }
 ```
+
+**Response (unhealthy):**
+```json
+{
+  "status": "unhealthy",
+  "database": "error: <error message>"
+}
+```
+
+**Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | `"healthy"` or `"unhealthy"` |
+| database | string | `"connected"` on success, or `"error: <message>"` on failure |
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success (returns healthy or unhealthy status) |
+| 401 | Missing API key |
+| 403 | Invalid API key |
 
 ---
 
@@ -87,6 +120,20 @@ curl -X GET \
 }
 ```
 
+**Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| symbols | string[] | Alphabetically sorted list of all available commodity symbols |
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+
 ---
 
 ### List All Categories
@@ -107,11 +154,27 @@ curl -X GET \
 }
 ```
 
+**Response Schema:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| categories | string[] | Alphabetically sorted list of commodity categories |
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+
 ---
 
 ### Latest Data for All Commodities
 
 Get the most recent EOD data for all commodities. Optionally filter by category.
+
+> **Note:** This endpoint is **not paginated** — it returns one record per symbol in a single response.
 
 **Request:**
 ```bash
@@ -163,6 +226,18 @@ curl -X GET \
 ]
 ```
 
+**Response Schema:** Array of `CommodityEODResponse` objects (see [CommodityEODResponse](#commodityeodresponse-schema) below).
+
+> **Note:** Results have no guaranteed sort order.
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+
 ---
 
 ### Latest Data for Single Commodity
@@ -198,11 +273,23 @@ curl -X GET \
 }
 ```
 
+**Response Schema:** A single `CommodityEODResponse` object (see [CommodityEODResponse](#commodityeodresponse-schema) below).
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+
 ---
 
 ### Get Commodity History by Symbol
 
 Get historical EOD data for a specific commodity with pagination and date filtering.
+
+> **Note:** Results are sorted by `date` descending (most recent first).
 
 **Request:**
 ```bash
@@ -249,11 +336,24 @@ curl -X GET \
 }
 ```
 
+**Response Schema:** A `PaginatedResponse` containing `CommodityEODResponse` items (see schemas below).
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+| 422 | Invalid query parameters |
+
 ---
 
 ### List All Commodities (Paginated)
 
 Get all EOD data across all commodities with pagination and filtering.
+
+> **Note:** Results are sorted by `date` descending, then `symbol` ascending.
 
 **Request:**
 ```bash
@@ -296,11 +396,24 @@ curl -X GET \
 }
 ```
 
+**Response Schema:** A `PaginatedResponse` containing `CommodityEODResponse` items (see schemas below).
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+| 422 | Invalid query parameters |
+
 ---
 
 ### Query Multiple Commodities
 
 Query EOD data for multiple symbols in a single request.
+
+> **Note:** Results are sorted by `date` descending, then `symbol` ascending.
 
 **Request:**
 ```bash
@@ -320,49 +433,31 @@ curl -X POST \
 }
 ```
 
+**Request Body Fields:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| symbols | string[] | Yes | List of commodity symbols to query |
+| start_date | date | No | Start date filter (YYYY-MM-DD) |
+| end_date | date | No | End date filter (YYYY-MM-DD) |
+
 **Query Parameters:**
+
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | page | integer | No | Page number (default: 1) |
 | page_size | integer | No | Items per page (default: 100, max: 1000) |
 
-**Response:**
-```json
-{
-  "data": [
-    {
-      "date": "2024-12-31",
-      "symbol": "CL",
-      "name": "Crude Oil (WTI)",
-      "open": "71.50",
-      "high": "72.30",
-      "low": "71.20",
-      "close": "71.89",
-      "adjusted_close": "71.89",
-      "volume": 285000,
-      "category": "Energy",
-      "ingestion_ts": "2025-01-01T05:00:15.123456"
-    },
-    {
-      "date": "2024-12-31",
-      "symbol": "GC",
-      "name": "Gold",
-      "open": "2062.50",
-      "high": "2070.00",
-      "low": "2060.00",
-      "close": "2065.30",
-      "adjusted_close": "2065.30",
-      "volume": 150000,
-      "category": "Metals",
-      "ingestion_ts": "2025-01-01T05:00:18.654321"
-    }
-  ],
-  "page": 1,
-  "page_size": 10,
-  "total": 750,
-  "total_pages": 75
-}
-```
+**Response Schema:** A `PaginatedResponse` containing `CommodityEODResponse` items (see schemas below).
+
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+| 422 | Invalid request body or query parameters |
 
 ---
 
@@ -440,6 +535,17 @@ curl -X POST \
 - Parameterized queries are strongly recommended to prevent SQL injection
 - `Decimal` values are returned as floats, `date`/`datetime` values as ISO 8601 strings
 
+**Status Codes:**
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 400 | Validation error (see table above) |
+| 401 | Missing API key |
+| 403 | Invalid API key |
+| 422 | Invalid request body |
+| 500 | Query execution error (returns `"Query execution error: <message>"`) |
+
 ---
 
 ## Database Schema
@@ -476,7 +582,7 @@ CREATE TABLE commodities_eod (
 | `close` | NUMERIC | Closing price |
 | `adjusted_close` | NUMERIC | Adjusted closing price (corporate actions, splits) |
 | `volume` | BIGINT | Trading volume |
-| `category` | VARCHAR(50) | Commodity category: Energy, Metals, Grains, Softs, Livestock, Other |
+| `category` | VARCHAR(50) | Commodity category: Energy, Metals, Grains, Softs, Livestock, Other. May be `null` for recently ingested records. |
 | `ingestion_ts` | TIMESTAMP | Timestamp when the record was ingested into the database |
 
 **Categories:** Energy, Metals, Grains, Softs, Livestock, Other
@@ -490,35 +596,34 @@ CREATE TABLE commodities_eod (
 |--------|------|
 | CL | Crude Oil (WTI) |
 | NG | Natural Gas |
-| BZ | Brent Crude Oil |
+| BZ | Brent Crude |
 | HO | Heating Oil |
 | RB | RBOB Gasoline |
-| EBM | Ethanol |
-| EH | Ethanol (CBOT) |
-| EMA | Ethanol (CME) |
+| EBM | Milling Wheat N2 |
+| EH | Ethanol |
+| EMA | Maize (Paris) |
 | LGOc3 | Gas Oil |
 
 ### Metals
 | Symbol | Name |
 |--------|------|
-| GC | Gold |
+| GC | Gold (COMEX) |
 | SI | Silver |
 | HG | Copper |
 | PL | Platinum |
 | PA | Palladium |
-| ALI | Aluminum |
+| ALI | Aluminum (COMEX) |
 | NICKEL | Nickel |
-| CB | Cobalt |
-| TIO | Iron Ore |
-| HRC | Hot Rolled Coil Steel |
+| CB | Cash-settled Butter |
+| TIO | Iron Ore 62% Fe |
+| HRC | Hot-Rolled Coil Steel |
 
 ### Grains
 | Symbol | Name |
 |--------|------|
 | ZC | Corn |
-| ZS | Soybeans |
-| ZW | Wheat |
-| KE | Wheat (KCBT) |
+| ZS | Soybean |
+| KE | KC Hard Red Winter Wheat |
 | ZL | Soybean Oil |
 | SM | Soybean Meal |
 | O | Oats |
@@ -533,7 +638,7 @@ CREATE TABLE commodities_eod (
 | OJ | Orange Juice |
 | SB | Sugar |
 | RU | Rubber |
-| CPO | Crude Palm Oil |
+| CPO | Palm Oil |
 
 ### Livestock
 | Symbol | Name |
@@ -544,13 +649,49 @@ CREATE TABLE commodities_eod (
 | DC | Class III Milk |
 | GDK | Class IV Milk |
 | DY | Dry Whey |
-| NCFY | NC Feeder Cattle |
+| NCFY | Newcastle Coal |
 
 ### Other
 | Symbol | Name |
 |--------|------|
 | LBR | Lumber |
-| W | Wheat |
+| W | Wheat (CBOT) |
+
+---
+
+## Response Schemas
+
+### CommodityEODResponse Schema
+
+Returned by all commodity data endpoints as individual items.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| date | string (date) | Trading date (YYYY-MM-DD) |
+| symbol | string | Commodity ticker symbol |
+| name | string | Full commodity name |
+| open | string (decimal) \| null | Opening price |
+| high | string (decimal) \| null | Highest price of the day |
+| low | string (decimal) \| null | Lowest price of the day |
+| close | string (decimal) \| null | Closing price |
+| adjusted_close | string (decimal) \| null | Adjusted closing price (corporate actions, splits) |
+| volume | integer \| null | Trading volume |
+| category | string \| null | Commodity category (Energy, Metals, Grains, Softs, Livestock, Other). May be `null` for recently ingested records. |
+| ingestion_ts | string (datetime) \| null | ISO 8601 timestamp when the record was ingested |
+
+> **Note:** Price fields (`open`, `high`, `low`, `close`, `adjusted_close`) are returned as strings to preserve decimal precision. The SQL endpoint returns them as floats instead.
+
+### PaginatedResponse Schema
+
+Returned by paginated endpoints (`GET /commodities/{symbol}`, `GET /commodities`, `POST /commodities/query`).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| data | CommodityEODResponse[] | Array of commodity records for the current page |
+| page | integer | Current page number (1-based) |
+| page_size | integer | Number of items per page |
+| total | integer | Total number of matching records |
+| total_pages | integer | Total number of pages |
 
 ---
 
@@ -606,13 +747,15 @@ curl -X GET \
 ```
 
 ### 500 Internal Server Error
-Server-side error (database connectivity, etc.).
+Server-side error (database connectivity, query execution failure, etc.).
 
 ```json
 {
-  "detail": "Internal server error"
+  "detail": "Query execution error: <error message>"
 }
 ```
+
+> **Note:** The `detail` message varies by endpoint. The SQL endpoint returns `"Query execution error: <msg>"`. Other endpoints may return generic FastAPI error responses.
 
 ---
 
@@ -644,4 +787,4 @@ Data is ingested daily from EODHD API. The `ingestion_ts` field in each record i
 
 ## Support
 
-For issues or questions, contact the development team.
+For issues or questions, open an issue on the [GitHub repository](https://github.com/luqmaan2000/commodities-api).
